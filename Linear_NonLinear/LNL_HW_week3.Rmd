@@ -287,4 +287,3 @@ Gaussian.Copula.Age.45.Time.21.fit
 **Compare the correlations of the parametric models for both groups with Spearman correlations estimated earlier**
 
 In comparing these two clusters' correlations from the parametic models and Spearman correlation coefficients, the corrlations from the parametric models both have the same direction as their corresponding Spearman values with higher absolute values. Therefore correlations of the parametric models suggest a stronger relationship / dependency based on the uniform marginal distributions from the copula.
-
