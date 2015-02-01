@@ -1,0 +1,54 @@
+---
+title: "L3_Workshop"
+author: "Patrick Kelly"
+date: "Saturday, January 24, 2015"
+output: html_document
+---
+
+**Week 3 Workshop: Correlation and Dependence**
+---
+
+**Misleading Correlation**
+
+Example uncorrelated, but dependent variables
+
+```{r}
+set.seed(893075)
+Variable.X<-rnorm(500,0,1)
+Variable.Y<-Variable.X^2
+plot(Variable.X,Variable.Y)
+
+cor(Variable.X,Variable.Y)
+
+Variable.X<-rnorm(100,1,1)
+Variable.Y<-rnorm(100,1/1.5,1/1.5^2)
+Variable.Z<-rexp(100,1.5)
+
+plot(Variable.X,Variable.Y,ylim=c(-1,4))
+
+plot(Variable.X,Variable.Z,ylab="Variable.Y",ylim=c(-1,4))
+
+plot(rank(Variable.X)/100,rank(Variable.Y)/100)
+
+plot(rank(Variable.X)/100,rank(Variable.Z)/100)
+```
+
+**Copulas**
+
+Gaussian Copula
+
+```{r}
+library(copula)
+
+par(mfrow=c(2,2))
+set.seed(8301735)
+#Gaussian Copula, rho=0.9
+Gaussian.Copula.0.9<-normalCopula(param=.9,dim=2)
+persp(Gaussian.Copula.0.9, dCopula, main="pdf",xlab="u", ylab="v", zlab="c(u,v)")
+contour(Gaussian.Copula.0.9,dCopula, main="pdf",xlab="u", ylab="v")
+Simulated.Gaussian.Copula.0.9<-rCopula(100,Gaussian.Copula.0.9)
+plot(Simulated.Gaussian.Copula.0.9,main="Simulated Copula",xlab="Variable 1",ylab="Variable 2")
+plot(apply(Simulated.Gaussian.Copula.0.9,2,rank)/length(Simulated.Gaussian.Copula.0.9[,1]),main="Empirical Copula",xlab="Variable 1",ylab="Variable 2")
+title(main="Gaussian Copula, rho=0.9",outer=TRUE,line=-2)
+```
+

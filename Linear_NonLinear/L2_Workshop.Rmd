@@ -1,0 +1,92 @@
+---
+title: "L2_Workshop"
+author: "Patrick Kelly"
+date: "Saturday, January 17, 2015"
+output: html_document
+---
+
+Objective 1
+---
+
+```{r}
+#read in the data
+sample.vector <- read.csv("C:/Users/Patrick/SkyDrive/Documents/Education/UChicago/Linear_NonLinear/sample_for_optimization.csv",header=TRUE,sep=",")
+
+sample.vector <- sample.vector[,1]
+
+#create fn for the log-likelihood
+Negative.LL.Normal <- function(param.vector,sample){
+  
+  n <- length(sample)
+  
+  term1 <- (n*(0.5))*log(2*pi*param.vector[2])
+  term2 <- (1/(2*param.vector[2]))*(sum((sample-param.vector[1])^2))
+  
+  return(term1 + term2)
+  
+}
+```
+
+Optimize the negative log-likelihood function using `optim()`
+
+```{r}
+Optimized.Negative.Log.Likelihood.optim<-optim(c(7,4),
+                                               Negative.LL.Normal,
+                                               sample=sample.vector,
+                                               method="L-BFGS-B",
+                                               hessian=TRUE,
+                                               lower=c(-Inf,0),
+                                               control=list(trace=1))
+
+names(Optimized.Negative.Log.Likelihood.optim)
+
+```
+
+Observe the variables in object `Optimized.Negative.Log.Likelihood.optim`
+
+```{r}
+Optimized.Negative.Log.Likelihood.optim$par
+Optimized.Negative.Log.Likelihood.optim$value
+Optimized.Negative.Log.Likelihood.optim$counts
+Optimized.Negative.Log.Likelihood.optim$convergence
+```
+
+**convergence**
+An integer code. 0 indicates successful completion (which is always the case for "SANN" and "Brent"). Possible error codes are
+
+1 indicates that the iteration limit maxit had been reached.
+10 indicates degeneracy of the Nelder–Mead simplex.
+51 indicates a warning from the "L-BFGS-B" method; see component message for further details.
+52 indicates an error from the "L-BFGS-B" method; see component message for further details.
+
+```{r}
+Optimized.Negative.Log.Likelihood.optim$message
+Optimized.Negative.Log.Likelihood.optim$hessian
+```
+
+Make a filled contour plot of the negative log-likelihood function.
+
+```{r}
+#Plot the objective function
+Data.To.Plot.x<-seq(from=5,to=15,length.out=50)
+Data.To.Plot.y<-seq(from=15,to=35,length.out=50)
+
+
+Term.1<-length(sample.vector)/2*outer(log(2*pi*Data.To.Plot.y),rep(1,length(Data.To.Plot.y)))
+Term.2<-outer(rep(1,length(Data.To.Plot.x)),unlist(lapply(Data.To.Plot.x,FUN=function(vector.element,Data.Vector) sum((Data.Vector-vector.element)^2),sample.vector)))*outer(1/2/Data.To.Plot.y,rep(1,length(Data.To.Plot.y)))
+  
+Negative.Log.Likelihood.Data<-Term.1+Term.2
+filled.contour(Data.To.Plot.x,Data.To.Plot.y,Negative.Log.Likelihood.Data,color.palette=rainbow,nlevels=20)
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```

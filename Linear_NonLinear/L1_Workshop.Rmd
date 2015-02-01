@@ -1,0 +1,139 @@
+---
+title: "L1_Workshop"
+author: "Patrick Kelly"
+date: "Saturday, January 10, 2015"
+output: html_document
+---
+
+Objective
+---
+
+Learn how to fit the classical linear model in the framework of generalized linear model `glm()`.
+Compare the outputs of `lm()` and `glm()` and understand the differences between them.
+
+```{r}
+Linear.Model.Data <- read.csv("C:/Users/Patrick/SkyDrive/Documents/Education/UChicago/Linear_NonLinear/Week1ProjectData.csv",header=TRUE,sep=",")
+Linear.Model.Data[1:10,]
+
+Linear.Model.Data.Frame<-as.data.frame(Linear.Model.Data)
+```
+
+Fit Linear model Using lm() and glm()
+---
+
+Estimate the model using `lm()` and `glm()`
+
+```{r}
+Linear.Model.Data.lm<-lm(Output~Input,data=Linear.Model.Data.Frame)
+
+Linear.Model.Data.glm<-glm(Output~Input,family=gaussian(link="identity"),data=Linear.Model.Data.Frame)
+
+#Check and compare the names of the objects elements in both fits.
+names(Linear.Model.Data.lm)
+
+names(Linear.Model.Data.glm)
+
+#Compare the summaries of outputs.
+summary(Linear.Model.Data.lm)
+summary(Linear.Model.Data.glm)
+```
+
+Compare the Model Objects.
+---
+
+Compare the following fields in the model objects.
+Calculate the outputs of `glm()` using the fields of `lm()`
+
+1. coefficients
+2. residuals
+3. fitted.values
+4. linear.predictors
+5. deviance
+  1. Use deviance()
+  2. Calculate deviance manually based on the definition given in the lecture
+6. Akaike Information Criterion aic
+  1. Obtain it by using AIC()
+  2. Calculate it manually using the definition given in the lecture.
+7. y
+8. null.deviance
+9. dispersion
+10. The saturated model and the null model: log-likelihood and AIC
+
+```{r}
+#1
+Linear.Model.Data.lm$coefficients
+
+Linear.Model.Data.glm$coefficients
+
+#2
+Linear.Model.Data.lm$residuals[1:10]
+
+Linear.Model.Data.glm$residuals[1:10]
+
+#3
+Linear.Model.Data.lm$fitted.values[1:10]
+
+Linear.Model.Data.glm$fitted.values[1:10]
+
+#4
+Linear.Model.Data.lm$linear.predictors
+  
+Linear.Model.Data.glm$linear.predictors[1:10]
+
+#5
+  #1
+  deviance(Linear.Model.Data.lm)
+
+  deviance(Linear.Model.Data.glm)
+
+  #2
+  sum(Linear.Model.Data.lm$residuals^2)
+
+  sum(Linear.Model.Data.glm$residuals^2)
+  Linear.Model.Data.glm$deviance
+
+#6
+  #1
+  AIC(Linear.Model.Data.lm)
+
+  AIC(Linear.Model.Data.glm)
+
+  #2
+  (-2*deviance(Linear.Model.Data.lm) + 2*)
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```

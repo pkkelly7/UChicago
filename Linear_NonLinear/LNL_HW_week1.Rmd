@@ -1,0 +1,271 @@
+---
+title: 'Week 1: Homework Assignment'
+author: "Patrick Kelly"
+date: "Saturday, January 24, 2015"
+output: html_document
+---
+
+Objective
+---
+
+**This project helps understanding the linear model as a particular case of generalized linear model.**
+
+**The project is due on the day of the second class, 11:59 pm.**
+
+**This project is individual.**
+
+Assignment description
+---
+
+Use the data from the file Week1_Homework_Project_Data.csv to estimate linear model with `lm()`. Analize `summary()` of the estimated linear model.
+
+**What can you tell about the data and the fit?**
+
+```{r}
+Linear.Model.Data <- read.csv("C:/Users/Patrick/SkyDrive/Documents/Education/UChicago/Linear_NonLinear/Week1_Homework_Project_Data.csv",header=TRUE,sep=",")
+Linear.Model.Data[1:10,]
+
+Linear.Model.Data.Frame<-as.data.frame(Linear.Model.Data)
+```
+
+Estimate the model using `lm()`. Analize the summary of the model: what can you tell from it? 
+
+```{r}
+Linear.Model.Data.lm<-lm(Output~Input1+Input2+Input3,data=Linear.Model.Data)
+summary(Linear.Model.Data.lm)
+```
+
+To check the answers estimate `glm`.
+
+```{r}
+Returned.from.glm<-glm(Output~Input1+Input2+Input3,family=gaussian(link="identity"),data=Linear.Model.Data)
+names(Returned.from.glm)
+
+Returned.from.glm$coefficients
+```
+
+**Analysis:**
+
+The model seems to be a good fit with a multiple R-squared of 0.95. Also the coefficients for the intercept and Input1 seem to be good fits for the data as their pvalues are both significant. Although the coefficients for Input2 and Input3 are not significant they are still relevant with pvalues ~0.2.
+
+**By using any variables returned by `lm()` or `summary(lm.fit)` calculate the following characteristics of `glm()` that you would obtain if applied `glm()` to the same data.**
+
+**You use `glm()` to check your answers, but, please, do not use `glm` object or any functions applied to `glm` object to calculate your results.**
+
+Calculate variables:
+
+1. `coefficients` (5%)
+2. `residuals` (5%)
+3. `fitted.values` (5%)
+4. `linear.predictors` (10%)
+5. `deviance` (25%)
+    1. Use `deviance()` (10%)
+    2. Calculate deviance manually based on the definition given in the lecture (15%)
+6. Akaike Information Criterion `aic` (25%)
+    1. Obtain it by using `AIC()` (10%)
+    2. Calculate it manually using the definition given in the lecture. (15%)
+7. `y` (5%)
+8. `null.deviance` (10%)
+9. `dispersion` (10%)
+
+first, fit `lm()` and `glm()`
+```{r}
+lm.fit<-lm(Output~Input1+Input2+Input3,data=Linear.Model.Data)
+glm.fit<-glm(Output~Input1+Input2+Input3,family=gaussian(link="identity"),data=Linear.Model.Data)
+```
+
+**Variable 1 - coefficients**
+
+```{r}
+#get coefficients from lm()
+lm.fit$coefficients
+#check these against the coefficients glm()
+glm.fit$coefficients
+```
+
+These values are equal.
+
+**Variable 2 - residuals ... from the example that was provided**
+
+Residuals from `glm()` are calculated the same way as from `lm()`.
+
+To show equivalence you can, for example, plot the residuals from both `lm()` and `glm()` and also check the deviations from one another like it is done below.
+
+```{r}
+matplot(1:length(Linear.Model.Data[,1]),cbind(Linear.Model.Data.lm$residuals,Returned.from.glm$residuals),type="l",ylab="Residuals",xlab="Count")
+
+sum(abs(Linear.Model.Data.lm$residuals-Returned.from.glm$residuals)>.00000000001)
+```
+
+The last output shows that maximum deviation of Linear.Model.Data.lm$residuals from Returned.from.glm$residuals in absolute value is less than or equal to 0.00000000001.
+
+**Variable 3 - fitted values**
+
+```{r}
+#get fitted values from lm() --- display the first 20
+lm.fit$fitted.values[1:20]
+
+#prove that these fitted values are identical to those from the glm model
+#use the same methodology to compare fitted values as was used in comparing the residuals above
+sum(abs(lm.fit$fitted.values - glm.fit$fitted.values) > 0.00000000001)
+```
+
+These values are equal.
+
+**Variable 4 - linear predictors**
+
+```{r}
+#get linear predictors from lm()
+
+#since the link function = identity, the linear predictors are equalivalent to the fitted values
+#display the first linear predictors / fitted values
+lm.fit$fitted.values[1:20]
+
+#prove that these fitted values are identical to the linear predictors from the glm model
+#use the same methodology as above
+sum(abs(lm.fit$fitted.values - glm.fit$linear.predictors) > 0.00000000001)
+```
+
+These values are equal.
+
+**Variable 5 - deviance**
+
+1. Use `deviance()`
+
+```{r}
+deviance(lm.fit)
+#check the deviance from the glm fit
+glm.fit$deviance
+```
+
+These values are equal.
+
+2. Calculate deviance manually based on the definition given in the lecture
+
+```{r}
+#manual calculation of log-likelihood
+log.like.fn <- function(residuals){
+  n<-length(residuals)
+  sigma.sq <- sd(residuals)^2
+  term1 <- -(n/2)* log(2*pi*sigma.sq)
+  term2 <- -(1/(2*sigma.sq))*(sum((residuals)^2))
+  
+  ll.output <- term1 + term2
+  
+  return(ll.output)
+}
+
+#manual calculation of deviance
+deviance.fn <- function(fit){
+  
+  n <- length(fit$residuals)
+  sigma.sq <- var(fit$residuals)
+  
+  saturated <- -(n/2) * log(2*pi*sigma.sq)
+  estimated <- log.like.fn(fit$residuals)
+  
+  dev <- 2*sigma.sq*(saturated - estimated)
+  
+  return(dev)
+}
+
+deviance.fn(lm.fit)
+
+#also check that your deviance is equal to the linear model SSE
+all.equal(sum(lm.fit$residuals^2), deviance.fn(lm.fit))
+```
+
+These values are equal.
+
+**Variable 6 - Akaike Information Criterion**
+
+1. Obtain it by using `AIC()`
+
+```{r}
+AIC(lm.fit)
+#check the deviance from the glm fit
+glm.fit$aic
+```
+
+These values are equal.
+
+2. Calculate it manually using the definition given in the lecture
+
+```{r}
+#manual calculation of log-likelihood
+log.like.fn2 <- function(residuals){
+  n<-length(residuals)
+#   sigma.sq <- sd(residuals)^2
+  sigma.sq <- mean(residuals^2)
+  term1 <- -(n/2)* log(2*pi*sigma.sq)
+  term2 <- -(1/(2*sigma.sq))*(sum((residuals)^2))
+  
+  ll.output <- term1 + term2
+  
+  return(ll.output)
+}
+
+#manually calculate the AIC value
+aic.fn <- function(fit){
+  
+  resids <- fit$residuals
+  p <- length(fit$coefficients)
+  
+  return( (-2)*(log.like.fn2(resids)) + (2*p))
+  
+}
+
+aic.fn(lm.fit)
+```
+
+These values are nearly equal. 
+
+The difference between the 2 is insignificant and may be due to 2 different methods for calculating AIC. Through some basic internet searches it becomes apparent that there are several different common methodologies for calculating AIC.
+
+**Variable 7 - y**
+
+The `y` variables are simply equal to the "Output" data from our Linear.Model.Data
+
+```{r}
+#check the first 20 values
+Linear.Model.Data[1:20,1]
+
+#check that our "Output" data is equal to the glm `y` variable
+check.y <- cbind(glm.fit$y,Linear.Model.Data[,1])
+all.equal(check.y[,1],check.y[,2])
+```
+
+These values are equal. 
+
+**Variable 8 - null.deviance**
+
+```{r}
+glm.fit$null.deviance
+
+#manual calculation of null.deviance
+
+#first fit null model
+lm.nullfit<-lm(Output~1,data=Linear.Model.Data)
+
+#then use the deviance fn that I created above to determine the null deviance
+deviance.fn(lm.nullfit)
+```
+
+These values are equal.
+
+**Variable 9 - dispersion**
+
+```{r}
+# the dispersion from the glm model can be observed in the output from summary(glm.fit)
+summary(glm.fit)
+
+# you can see that it is equal to 1.530141
+
+#the dispersion is equal to the (residual squared error)^2
+
+#below is the calculation for dispersion from the lm() fit
+sum(lm.fit$residuals^2) / lm.fit$df.residual
+
+```
+
+These values are equal.
