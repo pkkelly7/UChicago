@@ -1,0 +1,113 @@
+---
+title: "LNL_HW_week5"
+author: "Patrick Kelly"
+date: "Saturday, February 14, 2015"
+output: pdf_document
+---
+
+**This assignment helps understanding Poisson regression and Negative Binomial regression.**
+---
+
+Recent outbreak of measles caused debated about necessity of vaccination.
+
+The data file for this project contains CDC data on immunization coverage for MMR for all U.S. states and the national immunization rate.
+
+The data for outbreaks in each state were simulated using the assumption that after vaccination 90% of vaccinated children become immuned.
+
+Another assumption was made that 100% of not immunized people get infected when exposed to the virus.
+
+The data for this project are in the file `MeaslesImmunizationCoverageAndOutbreaks.csv`
+
+Read the data.
+
+```{r}
+measles.data<-read.csv(file="C:/Users/Patrick/Documents/R/UChicago/Linear_NonLinear/MeaslesImmunizationCoverageAndOutbreaks.csv")
+
+measles.data<-as.data.frame(measles.data)
+```
+
+Fit Poisson Regression
+---
+
+```{r}
+measles.poisson.model<-glm(Outbreaks~Coverage,family=poisson,data=measles.data)
+summary(measles.poisson.model)
+
+names(measles.poisson.model)
+
+measles.poisson.model$linear.predictors
+```
+
+Compare the Outbreaks data with the fitted values.
+
+```{r}
+library(ggplot2)
+
+compare.results <- data.frame(rownum = c(1:length(measles.data$Outbreaks)), actual = measles.data$Outbreaks, fitted = measles.poisson.model$fitted.values)
+compare.results
+
+ggplot(compare.results, aes(rownum)) + geom_line(aes(y = actual, colour = "actual")) + geom_line(aes(y = fitted, colour = "fitted"))
+
+#compare.results.long <- melt(compare.results, id="rownum")
+#ggplot(data=compare.results.long,
+#       aes(x=rownum, y=value, colour=variable)) +
+#       geom_line()
+```
+
+Check that the link in our case is logarithmic.
+
+```{r}
+log(measles.poisson.model$fitted.values)
+```
+
+Interpretation of the model.
+
+What if coverage changes by 1%?
+
+Then the change of intensity measured in percentage points is
+
+```{r}
+(1-exp(measles.poisson.model$coef[2]*.01))*100
+```
+
+Fit Negative Binomial regression
+---
+
+The standard `glm()` function does not have functionality to fit negative binomial distribution. But the package MASS does have it.
+
+```{r}
+library(MASS)
+```
+
+Learn how to use the package to fit negative binomial regression.
+Fit the model.
+Interpret the results. Compare the fit with the fitted Poisson regression model.
+
+First, fit the negative binomial where the disperions (k) = 1
+
+```{r}
+measles.negbinom.model <- glm(Outbreaks~Coverage, negative.binomial(1), data=measles.data)
+measles.negbinom.model
+```
+
+Now, fit the negative binomial but let the model find the optimal dispersion
+
+```{r}
+measles.negbinom.model2 <- glm.nb(Outbreaks~Coverage, data=measles.data)
+measles.negbinom.model2
+summary(measles.negbinom.model2)
+
+#compare AIC values of both binomial models --- the second model, using glm.nb, is better 
+AIC(measles.negbinom.model,measles.negbinom.model2)
+
+#now compare AIC values btwn the Poisson model and neg. binom. model
+AIC(measles.poisson.model,measles.negbinom.model2)
+```
+
+**Interpret the results. Compare the fit with the fitted Poisson regression model**
+
+Initially when observing the output from the Poisson model, we notice that the null deviance is not greater than the null degrees of freedom. This is a first quick check that suggests that there is not overdispersion. But we explore further through fitting the negative binomial model anyway. Through the use of `glm.nb` we notice that it does not converge (iteration limit reached) - this also suggests that there is not overdispersion in the distribution.
+
+In further evaluating The negative binomial model we observe a significant negative correlation between the coverage and outbreaks (coeff = -.78), similar to the Poisson model. Both model fits are producing very similiar results but all other evidence suggests that the Poisson distribution / model is a better fit. This is further confirmed when comparing both models AIC values - again they are very simliar but the Poisson model is slightly lower (400.72 vs 402.72).
+
+In conclusion, the Poisson model is the most appropriate fit and the Coverage is a significant indep. variable w/ coeff -.783.

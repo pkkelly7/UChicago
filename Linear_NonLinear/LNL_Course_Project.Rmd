@@ -1,0 +1,319 @@
+---
+title: "LNL_Course_Project"
+author: "Patrick Kelly"
+date: "Saturday, February 14, 2015"
+output: pdf_document
+---
+
+**Course Assignment. Part 1**
+---
+
+**1. Problem Description**
+
+The business analytics group of a company is asked to investigate causes of malfunctions in technological process of one of the manufacturing plants that result in significantly increased cost to the end product of the business.
+One of suspected reasons for malfunctions is deviation of temperature during the process from optimal levels. The sample in the provided file contains times of malfunctions in seconds since the start of measurement and minute records of temperature.
+
+**2. Data**
+
+The file `MScA_LinearNonLinear_CourseProject.csv` contains time stamps of events expressed in seconds.
+
+Read and prepare the data.
+
+```{r}
+Course.Project.Data<-read.csv(file="C:/Users/Patrick/Documents/R/UChicago/Linear_NonLinear/MScA_LinearNonLinear_MalfunctionData.csv")
+
+Course.Project.Data<-as.data.frame(Course.Project.Data)
+Course.Project.Data[1:20,]
+```
+
+**3. Create Counting Process, Explore Cumulative Intensity**
+
+Counting Process is a step function that jumps by 1 at every moment of new event.
+
+```{r}
+Counting.Process<-as.data.frame(cbind(Time=Course.Project.Data$Time,Count=1:length(Course.Project.Data$Time)))
+
+Counting.Process[1:20,]
+
+plot(Counting.Process$Time,Counting.Process$Count,type="s")
+```
+
+**3.1 Explore cumulative intensity of the process**
+
+
+
+
+```{r}
+plot(Counting.Process$Time,Counting.Process$Count/Counting.Process$Time,
+     type="l",ylab="Cumulative Intensity")
+abline(h=Counting.Process$Count[length(Counting.Process$Count)]/
+         Counting.Process$Time[length(Counting.Process$Time)])
+abline(h=mean(Counting.Process$Count/Counting.Process$Time))
+
+#check intensity
+c(Last.Intensity=Counting.Process$Count[length(Counting.Process$Count)]/
+         Counting.Process$Time[length(Counting.Process$Time)],
+  Mean.Intensity=mean(Counting.Process$Count/Counting.Process$Time))
+```
+
+**4. Check for overdispersion**
+
+In order to do that create one-minute counts.
+
+```{r}
+#Make 60 second windows of time -- determine the observed counts in each minute duration
+
+event_counts_1 <- data.frame(table(ceiling(Counting.Process$Time/60)))
+colnames(event_counts_1) <- c("periods","counts")
+Event.Counts <- merge(periods,event_counts_1,by="periods",all.x=TRUE)
+Event.Counts[is.na(Event.Counts[,2]),2] <- 0
+
+Event.Counts
+
+#summarize event counts a different
+#Event.Counts <- hist(ceiling(Counting.Process$Time/60), breaks=15000/60)$counts
+#Event.Counts[,2]
+
+plot(Event.Counts)
+```
+
+**4.1 Methods for Testing Overdispersion**
+
+4.1.1 A quick and rough method
+
+Look at the output of `glm()` and compare the residual deviance with the number of degrees of freedom.
+If the assumed model is correct deviance is asymptotically distributed as Chi-squared (X2) with degrees of freedom n???k where n is the number of observations and k is the number of parameters.
+For Chi-squared distribution X2 distribution the mean is the number of degrees of freedom n???k.
+If the residual deviance returned by `glm()` is greated than n???k then it might be a sign of overdispersion.
+
+Test the method on simulated Poisson data.
+
+Note: Deviance has chisquared distribution (mean is the df)
+
+```{r}
+Test.Deviance.Overdispersion.Poisson<-function(Sample.Size,Parameter.Lambda){
+  my.Sample<-rpois(Sample.Size,Parameter.Lambda)
+  Model<-glm(my.Sample~1,family=poisson)
+  Dev<-Model$deviance
+  Deg.Fred<-Model$df.residual
+  (((Dev/Deg.Fred-1)/sqrt(2/Deg.Fred)>-1.96)&((Dev/Deg.Fred-1)/sqrt(2/Deg.Fred)<=1.96))*1
+} 
+Test.Deviance.Overdispersion.Poisson(100,1)
+
+sum(replicate(1000,Test.Deviance.Overdispersion.Poisson(100,1)))
+sum(replicate(1000,Test.Deviance.Overdispersion.Poisson(150,1)))
+sum(replicate(1000,Test.Deviance.Overdispersion.Poisson(200,1)))
+
+exp(glm(rpois(1000,2)~1,family=poisson)$coeff)
+```
+
+Perform the same test on negative binomial data
+
+```{r}
+Test.Deviance.Overdispersion.NBinom<-function(Sample.Size,Parameter.prob){
+  my.Sample<-rnbinom(Sample.Size,2,Parameter.prob)
+  Model<-glm(my.Sample~1,family=poisson)
+  Dev<-Model$deviance
+  Deg.Fred<-Model$df.residual
+  (((Dev/Deg.Fred-1)/sqrt(2/Deg.Fred)>-1.96)&((Dev/Deg.Fred-1)/sqrt(2/Deg.Fred)<=1.96))*1
+} 
+
+sum(replicate(1000,Test.Deviance.Overdispersion.NBinom(100,.2)))
+```
+
+Now apply the test to the one-minute event counts.
+
+```{r}
+GLM.model<-glm(Event.Counts~1,family=poisson)
+GLM.model
+```
+
+Do you see signs of overdispersion?
+
+**4.1.2 Regression test by Cameron-Trivedi**
+
+The test implemented in AER is described in Cameron, A.C. and Trivedi, P.K. (1990). Regression-based Tests for Overdispersion in the Poisson Model. Journal of Econometrics, 46, 347-364.
+
+In a Poisson model, the mean is E(Y)=?? and the variance is V(Y)=?? as well.
+They are equal. The test has a null hypothesis c=0 where Var(Y)=??+c???f(??), c<0 means underdispersion and c>0 means overdispersion.
+The function f(.) is some monotonic function (linear (default) or quadratic).
+The test statistic used is a t statistic which is asymptotically standard normal under the null.
+
+```{r}
+library(AER)
+
+mysample<-rpois(100,1)
+model<-glm(mysample~1,family=poisson)
+
+mysample2<-rnbinom(100,2,0.2)
+model2<-glm(mysample2~1,family=poisson)
+
+#Disp.Test
+dispersiontest(model)
+dispersiontest(model2)
+```
+
+**4.1.3 Test against Negative Binomial Distribution**
+
+The null hypothesis of this test is that the distribution is Poisson as particular case of Negative binomial against Negative Binomial.
+
+The references are:
+A. Colin Cameron and Pravin K. Trivedi (1998) Regression analysis of count data. New York: Cambridge University Press.
+
+Lawless, J. F. (1987) Negative Binomial and Mixed Poisson Regressions. The Canadian Journal of Statistics. 15:209-225.
+
+Required packages are MASS (to create a negative binomial object with glm.nb) and pscl the test function is odTest.
+
+```{r}
+library(MASS)
+library(pscl)
+
+#fit the negative binomial and test which negative binomial it is likely to be --- if it is general negative binomial then it is not poisson, but we may find that it is poisson that fits the best ... 
+
+#small p-value = reject that it is poisson
+
+# Test.Deviance.Overdispersion.Poisson2<-function(samplesize,param_lambda){
+#   p_sample<-rpois(samplesize,param_lambda)
+#   p_sample<-data.frame(p_sample_var = p_sample)
+#   nbmodel<-glm.nb(p_sample_var~1,data=p_sample)
+#   odtest_out <- odTest(nbmodel)
+#   return(odtest_out)
+# }
+# 
+# Test.Deviance.Overdispersion.Poisson2(100,5)
+
+  p_sample<-rpois(100,1)
+  nbmodel<-glm.nb(p_sample~1)
+  odtest_out <- odTest(nbmodel)
+
+# Test.Deviance.Overdispersion.NBinom2<-function(samplesize,param_prob){
+#   rnsample<-rnbinom(samplesize,2,param_prob)
+#   nbmodel<-glm.nb(rnsample~1)
+#   odTest(nbmodel)
+# } 
+# 
+# Test.Deviance.Overdispersion.NBinom2(100,.2)
+
+  rnsample<-rnbinom(100,2,0.2)
+  nbmodel<-glm.nb(rnsample~1)
+  odTest(nbmodel)
+
+```
+
+**5. Find the distribution of Poisson intensity**
+
+5.1. Kolmlgorov-Smirnov test
+
+Kolmogorov-Smirnov test is used to test hypotheses of equivalence between two empirical distributions or equivalence between one empirical distribution and one theoretical distribution.
+
+```{r}
+library(lattice)
+library(latticeExtra)
+
+sample1=rnorm(100)
+sample2=rnorm(100,1,2)
+Cum.Distr.Functions <- data.frame(sample1,sample2)
+ecdfplot(~ sample1 + sample2, data=Cum.Distr.Functions, auto.key=list(space='right'))
+```
+
+Check equivalence of empirical distributions for the two samples.
+
+```{r}
+ks.test(sample1,sample2)
+```
+
+Check eqiovalence of empirical distribution of `sample1` and theoretical distribution `Norm(0,1)`.
+
+```{r}
+ks.test(sample1,"pnorm",mean=0,sd=1)
+```
+
+Check eqiovalence of empirical distribution of `sample2` and theoretical distribution `Norm(0,1)`.
+
+```{r}
+ks.test(sample2,"pnorm",mean=0,sd=1)
+```
+
+5.2. Check the distribution for the entire period
+
+Apply Kolmogorov-Smirnov test to `Counting.Process$Time` and theoretical exponential distribution with parameter equal to average intensity.
+
+Hint: the empirical distribution should be estimated for time intervals between malfunctions.
+
+```{r}
+#create vector of differences
+time_differences <- diff(Counting.Process$Time)
+
+#check the culm dist plot
+ecdfplot(~time_differences)
+
+#check ks test
+ks.test(time_differences, "pexp", rate=(1/mean(time_differences)))
+ks.test(time_differences, "pexp", exact = TRUE
+```
+
+Plot empirical cumulative distribution function for time intervals between malfunctions.
+
+```{r}
+
+```
+
+**5.3. Check distribution of one-minute periods**
+
+Use at least 5 different candidates for distribution of Poisson intensity of malfunctions.
+
+Find one-minute intensities.
+
+```{r}
+hist(Event.Intensities)
+```
+
+Fit 5 different distributions to `Event.Intensities` using `fitdistr()` from MASS.
+
+Recommendation: start with fitting normal and exponential distributions first.
+
+```{r}
+Fitting.Normal
+
+Fitting.Exponential
+```
+
+Test the fitted distributions with Kolmogorov-Smirnov test.
+
+```{r}
+c(KS.Normal$statistic,P.Value=KS.Normal$p.value)
+
+c(KS.Exp$statistic,P.Value=KS.Exp$p.value)
+```
+
+Try to fit gamma distribution directly
+
+Estimate parameters of gamma distribution using method of moments.
+
+```{r}
+Moments.Rate
+
+Moments.Shape
+```
+
+Check gamma distribution with these parameters as a theoretical distribution using Kolmogorov-Smirnov test.
+
+```{r}
+KS.Test.Moments
+```
+
+Find at least 2 more candidates and test them by Kolmogorov-Smirnov.
+
+Collect all estimated distributions together and make your choice.
+
+```{r}
+rbind(KS.Moments=c(KS.Test.Moments$statistic,P.Value=KS.Test.Moments$p.value),
+      KS.Candidate.4=c(KS.Candidate.4$statistic,P.Value=KS.Candidate.4$p.value),
+      KS.Candidate.5=c(KS.Candidate.5$statistic,P.Value=KS.Candidate.5$p.value),
+      KS.Exp=c(KS.Exp$statistic,P.Value=KS.Exp$p.value),
+      KS.Normal=c(KS.Normal$statistic,KS.Normal$p.value))
+```
+
+**What distribution for the one-minute intensity of malfunctions do you choose?**
+
+**What is the resulting distribution of the counts of one-minute malfunctions for your choice?**
