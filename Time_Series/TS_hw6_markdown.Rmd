@@ -5,12 +5,29 @@ date: "Thursday, May 28, 2015"
 output: pdf_document
 ---
 
+**Homework 6**
+---
 
+**1. Use linear regression model - plot the ACF (of residuals) - what can you conclude?**
 
 ```{r}
+#read in data
+dataset <- read.csv("~/R/UChicago/Time_Series/Dataset.csv")
+names(dataset) <- c("gas.rate","CO2.pct")
+head(dataset)
 
+#fit linear model
+lm.model <- lm(CO2.pct ~ gas.rate, data = dataset)
 
-
+#check acf of residuals
+acf(lm.model$residuals, lag.max = 200)
 ```
 
+As you can see from the ACF residuals above, it is not diminishing overtime and oscillates between positive and negative. This indicates that there is autocorrelation between the residuals and therefore they are not independent.
+
+**2. Use ARIMA (0,0,1) model for the residuals. Adjust the Input gas rate and Output CO2 % with the MA coefficient. Combine with the linear regression model. Plot the residuals**
+
+```{r}
+arima(x = dataset$CO2.pct, order = c(0,0,1))
+```
 
