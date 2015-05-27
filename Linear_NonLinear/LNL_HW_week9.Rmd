@@ -1,0 +1,112 @@
+---
+title: "LNL_HW_week9"
+author: "Patrick Kelly"
+date: "Thursday, March 12, 2015"
+output: pdf_document
+---
+
+The data in the file HIV_Protease.csv show part of the analysis of HIV enzyme called Protease. Protease plays important role in spreading the virus and is often targeted by drugs trying to contain the virus in patient.
+
+Because HIV virus mutates a lot it develops resistance to drugs when codons in certain positions in the sequence enzyme get replaced by other codons.
+
+Read the data.
+
+```{r}
+HIV.Protease.Data<-read.csv(file="C:/Users/Patrick/Documents/R/UChicago/Linear_NonLinear/HIV_Protease.csv",header=TRUE,sep=",")
+HIV.Protease.Data<-as.data.frame(HIV.Protease.Data)
+
+head(HIV.Protease.Data)
+```
+
+The first column shows if the effect of the treatment on number of patients: 0 means no effect (resistance to drug) and 1 means successful treatment.
+
+The second column shows the virus load, i.e. some measure of home many viruses are in the patient's body before the treatment. The last column shows the symbol in the second position (CODON_2) of HIV Protease which each patient has.
+
+Show all possible expressions of CODON_2 and how many times they appear in the last column.
+
+```{r}
+table(HIV.Protease.Data$CODON_2)
+```
+
+Show the levels of VL that appear simultaneously with expression "caa" and look at the histogram of VL values.
+
+```{r}
+HIV.Protease.Data.caa.VL<-subset(HIV.Protease.Data$VL,HIV.Protease.Data$CODON_2=="caa")
+hist(HIV.Protease.Data.caa.VL)
+```
+
+Do the same for the expression "cag"
+
+```{r}
+HIV.Protease.Data.cag.VL<-subset(HIV.Protease.Data$VL,HIV.Protease.Data$CODON_2=="cag")
+hist(HIV.Protease.Data.cag.VL)
+```
+
+Compare the means.
+
+```{r}
+c(mean(HIV.Protease.Data.cag.VL),mean(HIV.Protease.Data.caa.VL))
+```
+
+Fit linear model
+
+```{r}
+lm.CODON_2.VL <- lm(VL ~ CODON_2, data=HIV.Protease.Data)
+
+AIC(lm.CODON_2.VL)
+
+anova(lm.CODON_2.VL)
+```
+
+**The means do not seem to be different. Explain why.**
+
+The means do not appear to be different because although the distributions of are different between caa and cag (as observed above), the centers (averages) of the VL values across the different `CODON_2` values are similar (also see above). Observe the pvalue of the ANOVA above, which indicates that we cannot reject the null hypothesis that the means are different.
+
+
+
+
+Fit the model with random effect.
+
+```{r}
+library(lme4)
+lm.CODON_2.VL.Mixed <- lmer(VL ~ (1|CODON_2), data=HIV.Protease.Data)
+
+AIC(lm.CODON_2.VL.Mixed)
+```
+
+**Compare the fit with model with fixed effect.**
+
+The linear model with the fixed effect is marginally better than the random effect model based on the AIC values (1931.9 vs 1936.5).
+
+Fit logistic regression `Resp~VL`
+
+```{r}
+glm.CODON_2.VL <- glm(Resp ~ VL, family = "binomial", data=HIV.Protease.Data)
+
+AIC(glm.CODON_2.VL)
+
+matplot(1:length(HIV.Protease.Data$Resp),cbind(HIV.Protease.Data$Resp,glm.CODON_2.VL$fitted.values),pch=16)
+
+head(cbind(HIV.Protease.Data$Resp,glm.CODON_2.VL$fitted.values))
+```
+
+Fit model with CODON_2 expression as predictor.
+
+Compare the results with other models. Compare the predictions with the response variable. Plot predicted values and interpret them.
+
+```{r}
+library(MASS)
+
+glm.CODON_2.LV_2<-glmmPQL(Resp~VL,random=~1|CODON_2,family=binomial,data=HIV.Protease.Data)
+
+AIC(glm.CODON_2.LV_2)
+
+names(glm.CODON_2.LV_2)
+
+plot(predict(glm.CODON_2.VL,type="response"))
+plot(predict(glm.CODON_2.LV_2,type="response"))
+
+head(cbind(HIV.Protease.Data$Resp,predict(glm.CODON_2.LV_2,type="response")))
+```
+
+Although the mixed model using CODON_2 as a random variable does not produce an AIC value, by observing the plot of the responses from the two models above we a can see that they are distinctly different and the latter plot (with CODON_2 as a mixed variable) produces better results.

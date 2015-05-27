@@ -1,0 +1,126 @@
+---
+title: "LNL_HW_week8"
+author: "Patrick Kelly"
+date: "Saturday, March 07, 2015"
+output: pdf_document
+---
+
+**Week 8 Assignment**
+---
+
+Look at the sample in the file LinearModelCase1.csv. Below nSample is the length of the sample imported from the file. The first 10 rows and the X-Y plot are:
+
+```{r}
+MarketingData<-read.csv(file="C:/Users/Patrick/Documents/R/UChicago/Linear_NonLinear/MarketingExperiment.csv",header=TRUE,sep=",")
+MarketingData<-as.data.frame(MarketingData)
+MarketingData[1:10,]
+
+plot(MarketingData$Time,MarketingData$Probability, type="p",pch=19,xlab="Time",ylab="Probability")
+```
+
+Estimate linear model using function lm look at the output of the function
+
+```{r}
+MarketingData.EstimatedLinearModel<-lm(Probability~Time,data=MarketingData)
+names(MarketingData.EstimatedLinearModel)
+
+MarketingData.EstimatedLinearModel$coefficients
+```
+
+look at the model summary 
+
+```{r}
+summary(MarketingData.EstimatedLinearModel)
+
+names(summary(MarketingData.EstimatedLinearModel))
+```
+
+**Interpret the results in the output.**
+
+The model above is generally a good fit - low residual sq error, high multiple r-squared and our independent variable (time) is highly significant.
+However, through observing the original plot of the data we can see that there may be multiple samples within this data which is definitely worth further exploring, particularly through observing our other independent variable (gender).
+
+Observe the residuals
+
+```{r}
+EstimatedResiduals<-MarketingData.EstimatedLinearModel$residuals
+plot(MarketingData$Time,EstimatedResiduals)
+```
+
+and their probability density in comparison with the normal density
+
+```{r}
+Probability.Density.Residuals<-density(EstimatedResiduals)
+plot(Probability.Density.Residuals,ylim=c(0,10))
+lines(Probability.Density.Residuals$x,dnorm(Probability.Density.Residuals$x,mean=mean(EstimatedResiduals),sd=sd(EstimatedResiduals)))
+```
+
+**What do you conclude from the analysis of residuals?**
+
+The analysis of residuals confirms my suspision mention above that there are two seperate samples within the data. This can be see through the plot of the residuals but can be strongly seen in the probability density plot of the residuals.
+
+This is futher supported when checking the plot of the data again, differing the color by gender.
+
+```{r}
+plot(MarketingData$Time,MarketingData$Probability, type="p",pch=19,
+     xlab="Time",ylab="Probability",col=MarketingData$Gender)
+```
+
+Add the fixed effect based on gender.
+Compare the two summaries.
+
+```{r}
+MarketingData.LinearModel.Gender<-lm(Probability~Time+Gender,data=MarketingData)
+summary(MarketingData.LinearModel.Gender)
+
+summary(MarketingData.EstimatedLinearModel)
+```
+
+**Comparison of the two models above**
+
+The model including linear model including both `Time` and `Gender` is a better fit. Both of `Time` and `Gender` are significant, the residual standard error improved, and the multiple r-square improved. Overall it is clear that the second model is a better fit.
+
+
+Learn how to fit the model using `lmer()` from `lme4`
+
+First use the simplest random effects model with Time as output and Gender as the only random effect.
+
+```{r}
+library(lme4)
+
+MarketingData.Time.Random.Effect<-lmer(Time~1+(1|Gender),data=MarketingData)
+summary(MarketingData.Time.Random.Effect)
+```
+
+One way of thinking about the variances returned by the summary of `lmer()` is: residual variance is the variance within the groups and each random effect variance is the variance between the groups.
+
+Look at other fields in `lmer()` object.
+
+```{r}
+names(summary(MarketingData.Time.Random.Effect))
+summary(MarketingData.Time.Random.Effect)$coefficients
+summary(MarketingData.Time.Random.Effect)$sigma
+
+##summary(MarketingData.Time.Random.Effect)$residuals
+```
+
+Now apply `lmer()` to fit the model with one predictor Rime and one random effect based on Gender
+
+```{r}
+MarketingData.Probability.Random.Effect <- lmer(Probability ~ Time + (1|Gender), data=MarketingData)
+
+summary(MarketingData.Probability.Random.Effect)
+```
+
+**Compare the summaries and residuals of `MarketingData.Probability.Random.Effect` the linear model `Probability~Time`.**
+
+In checking the summaries of the two models we see that the residual standard error of the linear model (0.0458) is higher than the residual std dev of the mixed model (0.02487). Furthermore the AIC value for the mixed model is considerably lower than the linear model (-4509.9 < -3323.3). Both models show that Time is important to the model, and in the mixed model the ratio of the Gender variance is greater than the residual variance  - supporting its significance in the model as well.
+
+Through plotting the residials of the mixed model (see below) and comparing to the visualizations of the linear model residuals - from earlier in the analysis - we can see that the residuals from the mixed model appear to uniform (a much more desirable outcome).
+
+```{r}
+Mixed.Residuals <- summary(MarketingData.Probability.Random.Effect)$residuals
+
+plot(MarketingData$Time,Mixed.Residuals)
+```
+

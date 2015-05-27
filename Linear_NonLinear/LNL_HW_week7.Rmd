@@ -1,0 +1,62 @@
+---
+title: "LNL_HW_week6"
+author: "Patrick Kelly"
+date: "Saturday, February 28, 2015"
+output: pdf_document
+---
+
+**Week 7 Assignment: Contingency Tables**
+---
+
+The contingency table that we created today shows counts of preferences for tea or coffee cross-classified according to whether the responder is a male or a female.
+
+```{r}
+y<-c(8,4,5,2)
+Gender<-gl(2,1,4,labels=c("Male","Female"))
+Preference<-gl(2,2,labels=c("Coffee","Tea"))
+Beverage.Preference<-data.frame(y,Gender,Preference)
+Beverage.Preference
+```
+
+Analyze this table using material from Chapter 4 of the book and the workshop description for this week.
+
+```{r}
+(bp.table <- xtabs(y ~ Gender+Preference))
+```
+
+**Estimate Poisson and binomial models.**
+
+```{r}
+#Poisson
+p.modl <- glm(y ~ Gender+Preference, poisson)
+summary(p.modl)
+
+#Binomial
+(m <- matrix(y,nrow=2)) 
+b.modl <- glm(m ~ 1, family=binomial)
+```
+
+**Apply drop1() to analyze significance of factors. Describe how drop1() works.**
+
+```{r}
+drop1(p.modl, test = "Chi")
+```
+
+How `drop1()` works:
+This function fits different models by dropping each of the arguments within the model and provides a comparison of models based on the AIC criterion and whatever test method specified (Chisquared in this case). Generally the lower the AIC, the better the model. It is also important to consider the `Pr(>Chi)` terms to understand if signifiance of the deviance measure for each model.
+
+In analyzing the significance of the factors, we see that both of the factors are not highly significant but are still directional. `Gender` is more significant but still not significant at a 95% confidence level, while `Preference` is loosely directional, if at all. Although the AIC increases using `Gender` and excluding `Preference`, this analysis does not make a very strong case for either parameter. This is also supported by the coefficient p-values from summary output of the poisson model.
+
+**Analyze the fit using deviance.**
+
+In observing the deviance of the null model (4.02 on 3 degrees of freedom) we see that the null model is generally a satisfactory fit. Although the deviance when including both `Gender` and `Preference` drops to 0.05, the cost of adding adding these parameters to the model may not be worth the drop in deviance given the acceptable level of the null model.
+
+In checking the output of the `drop1()` function, we see that including only `Preference` drops the deviance to 2.69 and including only `Gender` drops the deviance to 1.38. However considering the weak strength of these variables on the model, the above conclusion holds that the null model is a satisfactory fit. Although there could be a case made for including `Gender`.
+
+**Fit binomial model to test homogeneity.**
+
+```{r}
+summary(b.modl)
+```
+
+In observing the results of the fit of the null binomial model , we see that this hypothesis of homogeneity is supported. The deviance (0.5 on 1 degree of freedom) definitely supports the conclusions drawn above that the null model is sufficient. 
