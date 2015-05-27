@@ -1,0 +1,122 @@
+---
+title: "Time_Series_HW_4"
+author: "Patrick Kelly"
+date: "Thursday, May 14, 2015"
+output: pdf_document
+---
+
+Assignment Notes:
+
+The daily data is from Illinois Dept of Transporation (IDOT) for I80E 1EXIT (the 2nd data column) - note each data point is an hourly count of the number of vehicles at a specific location on I80E.
+
+Use the daily data for last 2 weeks of June 2013 to develop an ARIMA forecasting model.
+
+Objective is to forecast the hourly counts for July 1.
+
+The actual data file for July 1 is included for you to test your estimate.
+
+**Part 1**
+
+Use ARIMA(p,d,q) model to forecast. Find the model returned by R auto.arima(). Change the values of p and q and determine the best model using AICc and BIC. Do AICc and BIC select the same model as the best model?
+
+First, I manipulated the data in MS Excel to get it into a usable format.
+
+```{r}
+#import the data
+raw_data <- read.csv("~/R/UChicago/Time_Series/I80_EAST_data.csv")
+#there were some accidentally included empty rows at the end - clean those up
+raw_data <- raw_data[1:384,]
+#convert date column to dates
+raw_data$Date <- as.character(raw_data$Date)
+raw_data$Date <- as.Date(raw_data$Date, "%m/%d/%Y")
+#create value of date and time merged together
+raw_data$date_time <- as.POSIXct(paste(raw_data$Date,raw_data$Time), format="%Y-%m-%d %H:%M")
+
+#convert data into time series format
+data_ts <- ts(raw_data$I80E_1EXIT, frequency = 24)
+
+#subsetting data --- splitting between June and July
+june_ts <- window(data_ts, start = c(1,1), end = c(15,24))
+july_ts <- window(data_ts, start = c(16,1), end = c(16,24))
+
+#fit the ARIMA(p,d,q) model using auto.arima()
+library("forecast")
+
+(aa_fit <- auto.arima(june_ts, seasonal = FALSE))
+
+#select model based on best AICc and BIC values
+#rather than changing p and q manually, I am using the auto.arima() to optimize for these different parameters
+#optimize for AICc
+(aa_fit2 <- auto.arima(june_ts, seasonal = FALSE, ic="aicc"))
+#optimize for BIC
+(aa_fit3 <- auto.arima(june_ts, seasonal = FALSE, ic="bic"))
+
+```
+
+Do AICc and BIC select the same model as the best model?
+
+No, as the output above indicates, when the non-seasonal arima model is optimized for AICc versus BIC different models are produces. The fit optimized for AICc produces ARIMA(2,0,3), while the fit optimized for BIC produces ARIMA(2,0,2).
+
+**Part 2**
+
+Use day of the week seasonal ARIMA(p,d,q)(P,Q,D)s model to forecast for July 1 (which is a Monday)
+
+```{r}
+library(tseries)
+#day of week seasonal model
+#create new ts object with a frequency that aligns with the day of the week
+data_ts_2 <- ts(raw_data$I80E_1EXIT, frequency = (24*7))
+
+#subsetting data --- splitting between June and July
+june_ts_2 <- window(data_ts_2, start = c(1,1), end = c(3,24))
+july_ts_2 <- window(data_ts_2, start = c(3,25), end = c(3,48))
+
+#fit model
+check.aa.fit <- auto.arima(june_ts_2, seasonal = TRUE)
+(day.fit <- arima(june_ts, order=c(0,1,2), seasonal = list(order=c(0,1,0), period = (168) )))
+
+#forecast
+forecast.7.1<-forecast(day.fit,h=24)
+#check forecase output
+forecast.7.1$mean
+
+```
+
+**Part 3**
+
+Use hour of the day seasonal ARIMA (p,d,q)(P,D,Q)s model to forecast for the hours 8:00, 9:00, 17:00 and 18:00 on July 1
+
+```{r}
+#hour of the day seasonal model
+check.aa.fit <- auto.arima(june_ts, seasonal = TRUE)
+(hour.fit <- arima(june_ts, order=c(2,0,1), seasonal = list(order=c(2,0,0), period = (24) )))
+
+#forecast
+forecast2.7.1<-forecast(hour.fit,h=24)
+#check forecase output for 8:00, 9:00, 17:00 and 18:00
+forecast2.7.1$mean[c(8,9,17,18)]
+```
+
+**Part 4**
+
+For the July 1 8:00, 9:00, 17:00 and 18:00 forecasts, which model is better (part 2 or part 3) ?
+
+```{r}
+#determine residuals based on the difference between actual and projected
+
+#day of week model
+(f1<-as.vector(forecast.7.1$mean[c(8,9,17,18)]))
+(a1<-as.vector(july_ts_2[c(8,9,17,18)]))
+abs(f1-a1)
+#total error
+sum(abs(f1-a1))
+
+#hour of day model
+(f2<-as.vector(forecast2.7.1$mean[c(8,9,17,18)]))
+(a2<-as.vector(july_ts[c(8,9,17,18)]))
+abs(f2-a2)
+#total error
+sum(abs(f2-a2))
+```
+
+The part 2 (day of week) model is better based on checking the residuals, as displayed above.

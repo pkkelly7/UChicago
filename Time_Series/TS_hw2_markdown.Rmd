@@ -1,0 +1,85 @@
+---
+title: "TS_hw2_markdown"
+author: "Patrick Kelly"
+date: "Thursday, April 30, 2015"
+output: pdf_document
+---
+
+**Assignment #2 - Regression**
+---
+
+```{r}
+library(ggplot2)
+library(tseries) # for adf.test() fn
+library(car) # for vif() fn
+
+#bring in dataset
+data_movies <- read.csv("~/R/UChicago/Time_Series/hollywood_movies.csv")
+
+# 1. Plot the independent variables X2, X3 X4 together in a single plot - what do you conclude in terms of relationship between them?
+d1 <- cbind(data_movies[,c(1,2)],val=rep("X2",10))
+colnames(d1) <- c("X1","var","val")
+d2 <- cbind(data_movies[,c(1,3)],val=rep("X3",10))
+colnames(d2) <- c("X1","var","val")
+d3 <- cbind(data_movies[,c(1,4)],val=rep("X4",10))
+colnames(d3) <- c("X1","var","val")
+
+data_long <- rbind(d1,d2,d3)
+
+ggplot(data=data_long,aes(x=X1,y=var,col=val)) + geom_point(size=5)
+```
+
+**What do I see regarding the relationship between them?**
+
+The do appear to have a generally positive relationship / correlation. X2, X3 and X4 all seem to have a positive linear relationship with X1. Also X2 and X3 appear to have a strong correlation than X4 has with either of the two.
+
+```{r}
+# 2. Scatter plot among the variables
+plot(data_movies$X2,data_movies$X3, main="X2 by X3")
+plot(data_movies$X2,data_movies$X4, main="X2 by X4")
+plot(data_movies$X3,data_movies$X4, main="X3 by X4")
+```
+
+The above scatterplots support my previous comments.
+
+```{r}
+# 3. ADF of the independent variables
+adf.test(data_movies$X2)
+adf.test(data_movies$X3)
+adf.test(data_movies$X4)
+```
+
+Of the three variables, only X4 rejected the null hypothesis of non-stationarity. So we can only conclude that X4 is stationary but cannot make conclusions about either X2 or X3.
+
+```{r}
+# 4. Regression output - R2 and any other metric you want to mention
+lm1 <- lm(X1 ~ X2 + X3 + X4, data=data_movies)
+summ_lm1 <- summary(lm1)
+summ_lm1
+```
+
+The linear model above has a high (good) R2 value of 0.97. Also the overall p-value of the model is significant - as expected with the high R2.
+
+```{r}
+# 5. Regression coefficients
+summ_lm1$coefficients[,1]
+
+# 6. p-value of the coefficients
+summ_lm1$coefficients[,4]
+
+# 7. What can you comment about multicollinearity?
+vif(lm1)
+```
+
+As we did see some evidence from the initial charts that multicolinearity could be a potential issue, the values outputted from the `vif()` fn - which produces the variance inflation factor -  are mildly concerning. 
+
+The X4 vif value is safetly low (1.23) and does not raise concerns about multicolinearity, but the values for X2 and X3 are approaching 3. Although the X2 and X3 values are not totally alarming they may warrant further investigation, particularly if you were to collect more data.
+
+```{r}
+# 8. plot the ACF of the residuals
+res <- residuals(lm1)
+plot(res, main="residuals plot")
+acf(res, main="ACF of residuals")
+```
+
+The plot of the ACF of the residuals indicates that there are not any autocorrelation concerns in the residuals.

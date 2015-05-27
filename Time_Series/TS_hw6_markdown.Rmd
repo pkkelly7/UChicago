@@ -1,0 +1,16 @@
+---
+title: "Time_series_HW_6"
+author: "Patrick Kelly"
+date: "Thursday, May 28, 2015"
+output: pdf_document
+---
+
+
+
+```{r}
+
+
+
+```
+
+
